@@ -4,6 +4,9 @@
 // @version         20250311
 // @icon            https://evolve-partners.atlassian.net/s/g2slup/b/9/_/jira-favicon-scaled.png
 // @match           https://evolve-partners.atlassian.net/*
+// @updateURL       https://raw.githubusercontent.com/oxFilla/userscripts/main/PO-Form-Enhancer.js
+// @downloadURL     https://raw.githubusercontent.com/oxFilla/userscripts/main/PO-Form-Enhancer.js
+// @supportURL      https://github.com/oxFilla/userscripts/issues
 // @run-at          document-start
 // @compatible      chrome
 // @license         GPL3
