@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            PO Form Enhancer
 // @description     Simplifies the completion of the Evolve PO form by setting default values, formatting pasted numbers, and calculating the sum of all costs
-// @version         20250311
+// @version         20250312
 // @author          oxFilla
 // @namespace       https://github.com/oxFilla
 // @icon            https://evolve-partners.atlassian.net/s/g2slup/b/9/_/jira-favicon-scaled.png
@@ -18,8 +18,7 @@
 // Config/Requirements
 // =======================================================================================
 
-const tableSelector =
-    "#proforma-form-create-app > div:nth-child(1) > div > div > div:nth-child(3) > div.css-1jvgz0o > div > div.pm-table-container.with-shadow-observer > div > table > tbody";
+const tableSelector = "div.pm-table-container > div.pm-table-wrapper > table > tbody";
 
 /**
  * Waits for an element until it exists
