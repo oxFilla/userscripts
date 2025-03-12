@@ -2,6 +2,8 @@
 // @name            PO Form Enhancer
 // @description     Simplifies the completion of the Evolve PO form by setting default values, formatting pasted numbers, and calculating the sum of all costs
 // @version         20250311
+// @author          oxFilla
+// @namespace       https://github.com/oxFilla
 // @icon            https://evolve-partners.atlassian.net/s/g2slup/b/9/_/jira-favicon-scaled.png
 // @match           https://evolve-partners.atlassian.net/*
 // @updateURL       https://raw.githubusercontent.com/oxFilla/userscripts/main/PO-Form-Enhancer.js
