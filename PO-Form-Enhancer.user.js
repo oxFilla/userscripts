@@ -6,8 +6,8 @@
 // @namespace       https://github.com/oxFilla
 // @icon            https://evolve-partners.atlassian.net/s/g2slup/b/9/_/jira-favicon-scaled.png
 // @match           https://evolve-partners.atlassian.net/*
-// @updateURL       https://raw.githubusercontent.com/oxFilla/userscripts/main/PO-Form-Enhancer.js
-// @downloadURL     https://raw.githubusercontent.com/oxFilla/userscripts/main/PO-Form-Enhancer.js
+// @updateURL       https://raw.githubusercontent.com/oxFilla/userscripts/main/PO-Form-Enhancer.user.js
+// @downloadURL     https://raw.githubusercontent.com/oxFilla/userscripts/main/PO-Form-Enhancer.user.js
 // @supportURL      https://github.com/oxFilla/userscripts/issues
 // @run-at          document-start
 // @compatible      chrome
