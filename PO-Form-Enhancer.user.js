@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            PO Form Enhancer
 // @description     Simplifies the completion of the Evolve PO form by setting default values, formatting pasted numbers, and calculating the sum of all costs
-// @version         20250312
+// @version         20250411
 // @author          oxFilla
 // @namespace       https://github.com/oxFilla
 // @icon            https://evolve-partners.atlassian.net/s/g2slup/b/9/_/jira-favicon-scaled.png
@@ -163,10 +163,10 @@ async function setDefaultValues() {
  * The listener formats the pasted text to match the current locale's decimal separator.
  */
 async function pasteFormatter() {
-    await waitForElement('input[data-ds--text-field--input="true"]');
+    await waitForElement('td:nth-child(5) input');
     
     // Select all input fields in the "Netto-Kosten pro Einheit" column
-    let inputFields = document.querySelectorAll('td:nth-child(5) input[data-ds--text-field--input="true"]');
+    let inputFields = document.querySelectorAll('td:nth-child(5) input');
 
     // Detect the current locale's decimal separator
     const decimalSeparator = (1.1).toLocaleString().substring(1, 2);
