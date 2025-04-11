@@ -159,14 +159,14 @@ async function setDefaultValues() {
 }
 
 /**
- * Sets up a clipboard listener for all input fields with label="number".
+ * Sets up a clipboard listener for all input fields in the "Netto-Kosten pro Einheit" column.
  * The listener formats the pasted text to match the current locale's decimal separator.
  */
-async function setupClipboardListener() {
-    await waitForElement('input[label="number"]');
-
-    // Select all input fields with label="number"
-    let inputFields = document.querySelectorAll('input[label="number"]');
+async function pasteFormatter() {
+    await waitForElement('input[data-ds--text-field--input="true"]');
+    
+    // Select all input fields in the "Netto-Kosten pro Einheit" column
+    let inputFields = document.querySelectorAll('td:nth-child(5) input[data-ds--text-field--input="true"]');
 
     // Detect the current locale's decimal separator
     const decimalSeparator = (1.1).toLocaleString().substring(1, 2);
@@ -320,7 +320,7 @@ function setupUrlChangeDetection() {
 
 function main() {
     setDefaultValues();
-    setupClipboardListener();
+    pasteFormatter();
     addEventsForSumUpdate();
 }
 
