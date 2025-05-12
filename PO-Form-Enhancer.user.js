@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            PO Form Enhancer
 // @description     Simplifies the completion of the Evolve PO form by setting default values, formatting pasted numbers, and calculating the sum of all costs
-// @version         20250411
+// @version         20250512
 // @author          oxFilla
 // @namespace       https://github.com/oxFilla
 // @icon            https://evolve-partners.atlassian.net/s/g2slup/b/9/_/jira-favicon-scaled.png
@@ -19,6 +19,14 @@
 // =======================================================================================
 
 const tableSelector = "div.pm-table-container > div.pm-table-wrapper > table > tbody";
+const sumSelector = 'input[label="Nettosumme"]';
+
+const QUANTITY_COL_INDEX = 3; // 0-based index
+const NET_COST_COL_INDEX = 4; // 0-based index
+const NET_COST_COL_INPUT_SELECTOR = `td:nth-child(${NET_COST_COL_INDEX + 1}) input`;
+
+// Use React's internal properties to set the value
+const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
 
 /**
  * Waits for an element until it exists
@@ -163,17 +171,17 @@ async function setDefaultValues() {
  * The listener formats the pasted text to match the current locale's decimal separator.
  */
 async function pasteFormatter() {
-    await waitForElement('td:nth-child(5) input');
-    
+    await waitForElement(NET_COST_COL_INPUT_SELECTOR);
+
     // Select all input fields in the "Netto-Kosten pro Einheit" column
-    let inputFields = document.querySelectorAll('td:nth-child(5) input');
+    const priceInputs = document.querySelectorAll(NET_COST_COL_INPUT_SELECTOR);
 
     // Detect the current locale's decimal separator
     const decimalSeparator = (1.1).toLocaleString().substring(1, 2);
     const thousandSeparator = decimalSeparator === "." ? "," : ".";
 
-    inputFields.forEach(function (inputField) {
-        inputField.addEventListener("paste", function (event) {
+    priceInputs.forEach((priceInput) => {
+        priceInput.addEventListener("paste", function (event) {
             event.preventDefault(); // Prevent the default paste action
 
             // Get the pasted text from the clipboard
@@ -186,33 +194,24 @@ async function pasteFormatter() {
 
             if (isDecimalComma) {
                 // Remove thousand separators and replace the decimal separator with a dot
-                let formattedText = pastedText
+                const formattedText = pastedText
                     .replace(new RegExp(`\\${thousandSeparator}(?=\\d{3}(?:\\D|$))`, "g"), "")
                     .replace(decimalSeparator, ".");
 
                 // Insert the formatted text into the input field
-                inputField.value = formattedText;
-
-                // Update the input attribute value
-                inputField.setAttribute("value", formattedText);
+                nativeInputValueSetter.call(priceInput, formattedText);
             } else {
-                // Check if the pasted text contains a dot as decimal separator
-
-                // Remove thousand separators
-                let formattedText = pastedText
+                // Remove thousands separator to avoid confusion with decimal separators
+                const formattedText = pastedText
                     .replace(new RegExp(`\\${thousandSeparator}(?=\\d{3}(?:\\D|$))`, "g"), "")
                     .replace(decimalSeparator, "");
 
                 // Insert the pasted text as is
-                inputField.value = formattedText;
-
-                // Update the input attribute value
-                inputField.setAttribute("value", formattedText);
+                nativeInputValueSetter.call(priceInput, formattedText);
             }
 
             // Trigger input event
-            const changeEvent = new Event("input", { bubbles: true });
-            inputField.dispatchEvent(changeEvent);
+            priceInput.dispatchEvent(new Event("input", { bubbles: true }));
         });
     });
 }
@@ -221,36 +220,36 @@ async function pasteFormatter() {
  * Calculates the sum of all numbers in the fields of the fifth column and updates the specified element.
  */
 function calculateAndUpdateSum() {
-    const sumElement = document.querySelector("input#pf-undefined-ts-347");
-
     const table = document.querySelector(tableSelector);
     if (!table) return;
+
+    const sumElement = document.querySelector(sumSelector);
+    if (!sumElement) return;
 
     const rows = table.querySelectorAll("tr");
     let sum = 0;
 
     rows.forEach((row) => {
-        const columns = row.querySelectorAll("td");
-        if (columns.length > 4) {
-            const inputField = columns[4].querySelector("input");
-            if (inputField) {
-                const value = parseFloat(inputField.value);
-                if (!isNaN(value)) {
-                    sum += value;
-                }
+        const cells = row.querySelectorAll("td");
+        if (cells.length > 4) {
+            const quantityInput = cells[QUANTITY_COL_INDEX]?.querySelector("input");
+            const priceInput = cells[NET_COST_COL_INDEX]?.querySelector("input");
+
+            const quantity = parseFloat(quantityInput?.value);
+            const price = parseFloat(priceInput?.value);
+
+            if (!isNaN(quantity) && !isNaN(price)) {
+                sum += quantity * price;
             }
         }
     });
 
     const formattedSum = sum.toFixed(2);
 
-    // Use React's internal properties to set the value
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
     nativeInputValueSetter.call(sumElement, formattedSum);
 
     // Dispatch input event to notify React of the change
-    const inputEvent = new Event("input", { bubbles: true });
-    sumElement.dispatchEvent(inputEvent);
+    sumElement.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 /**
@@ -265,9 +264,12 @@ async function addEventsForSumUpdate() {
         rows.forEach((row) => {
             const columns = row.querySelectorAll("td");
             if (columns.length > 4) {
-                const inputField = columns[4].querySelector("input");
-                if (inputField) {
-                    inputField.addEventListener("input", calculateAndUpdateSum);
+                const priceField = columns[4].querySelector("input");
+                const quantityField = columns[3].querySelector("input");
+                if (priceField && quantityField) {
+                    // Add event listeners to both input fields
+                    priceField.addEventListener("input", calculateAndUpdateSum);
+                    quantityField.addEventListener("input", calculateAndUpdateSum);
                 }
             }
         });
@@ -286,7 +288,7 @@ function setupUrlChangeDetection() {
     function handleUrlChange() {
         const currentUrl = window.location.href;
         if (currentUrl !== lastUrl) {
-            console.log("URL changed from", lastUrl, "to", currentUrl);
+            console.debug("URL changed from", lastUrl, "to", currentUrl);
             lastUrl = currentUrl;
 
             // Wait a moment for the DOM to update after navigation
@@ -324,5 +326,5 @@ function main() {
     addEventsForSumUpdate();
 }
 
-// Set up URL change detection
+// Set up URL change detection as website is a one-page application
 setupUrlChangeDetection();
