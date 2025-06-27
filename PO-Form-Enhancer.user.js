@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            PO Form Enhancer
 // @description     Simplifies the completion of the Evolve PO form by setting default values, formatting pasted numbers, and calculating the sum of all costs
-// @version         20250512
+// @version         20250627
 // @author          oxFilla
 // @namespace       https://github.com/oxFilla
 // @icon            https://evolve-partners.atlassian.net/s/g2slup/b/9/_/jira-favicon-scaled.png
@@ -206,7 +206,7 @@ async function pasteFormatter() {
                     .replace(new RegExp(`\\${thousandSeparator}(?=\\d{3}(?:\\D|$))`, "g"), "")
                     .replace(decimalSeparator, "");
 
-                // Insert the pasted text as is
+                // Insert the formatted text into the input field
                 nativeInputValueSetter.call(priceInput, formattedText);
             }
 
@@ -281,7 +281,7 @@ function setupUrlChangeDetection() {
     let lastUrl = window.location.href;
 
     // Initial check if the URL already matches
-    if (lastUrl.includes("servicedesk/customer/portal/7/group/12/create/59")) {
+    if (lastUrl.includes("servicedesk/customer/portal/7/") && lastUrl.includes("create/59")) {
         main();
     }
 
@@ -292,7 +292,7 @@ function setupUrlChangeDetection() {
             lastUrl = currentUrl;
 
             // Wait a moment for the DOM to update after navigation
-            if (currentUrl.includes("servicedesk/customer/portal/7/group/12/create/59")) {
+            if (currentUrl.includes("servicedesk/customer/portal/7/") && currentUrl.includes("create/59")) {
                 main();
             }
         }
