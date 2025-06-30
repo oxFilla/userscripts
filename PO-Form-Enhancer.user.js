@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            PO Form Enhancer
 // @description     Simplifies the completion of the Evolve PO form by setting default values, formatting pasted numbers, and calculating the sum of all costs
-// @version         20250627
+// @version         20250630
 // @author          oxFilla
 // @namespace       https://github.com/oxFilla
 // @icon            https://evolve-partners.atlassian.net/s/g2slup/b/9/_/jira-favicon-scaled.png
@@ -75,88 +75,29 @@ async function setDefaultValues() {
     setTimeout(() => {
         const rows = table.querySelectorAll("tr");
 
-        /**
-         * Processes each cell in a specified column of a table.
-         *
-         * @param {number} columnIndex - The index of the column to process.
-         * @param {function} processCell - A callback function to process each cell.
-         *                                 It receives the cell element and a callback to process the next row.
-         */
-        function processColumn(columnIndex, processCell) {
-            const processRow = (rowIndex) => {
-                if (rowIndex >= rows.length) return;
-
-                const row = rows[rowIndex];
-                const columns = row.querySelectorAll("td");
-
-                if (columns.length > columnIndex) {
-                    processCell(columns[columnIndex], () => {
-                        processRow(rowIndex + 1);
-                    });
-                } else {
-                    processRow(rowIndex + 1);
-                }
-            };
-
-            processRow(0);
-        }
-
         // Process the last column for each row
-        function processWaehrungColumn(processCell) {
-            const processRow = (rowIndex) => {
-                if (rowIndex >= rows.length) return;
-
-                const row = rows[rowIndex];
-                const columns = row.querySelectorAll("td");
-                const lastColumnIndex = columns.length - 1;
-
-                if (lastColumnIndex >= 0) {
-                    processCell(columns[lastColumnIndex], () => {
-                        processRow(rowIndex + 1);
-                    });
-                } else {
-                    processRow(rowIndex + 1);
-                }
-            };
-
-            processRow(0);
-        }
-
-        // Process the waehrung column as last column for each row
-        // This is necessary because the last row has only two columns
-        // - waehrungColumn: The column element to process
-        // - next: A callback function to process the next
-        processWaehrungColumn((waehrungColumn, next) => {
+        for (const row of rows) {
+            const columns = row.querySelectorAll("td");
+            if (columns.length === 0) continue;
+            const waehrungColumn = columns[columns.length - 1];
             const waehrungSelectContainer = waehrungColumn.querySelector("div[class*=-control]");
             if (waehrungSelectContainer) {
-                waehrungSelectContainer
-                    .querySelector("div[class*=indicatorContainer]")
-                    .dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
-
-                const eurOption = waehrungColumn.querySelector("div[id*=option-0]");
-                if (eurOption) {
-                    eurOption.click();
-                } else {
-                    console.log("no option");
+                const indicator = waehrungSelectContainer.querySelector("div[class*=indicatorContainer]");
+                if (indicator) {
+                    // We have to set the currency via simulated click because the dropdown is managed by a React component.
+                    // Setting the value directly in the DOM or by attribute is ignored by React.
+                    // Only by opening the dropdown (mousedown) and clicking on the desired option
+                    // the value is accepted correctly and processed internally.
+                    indicator.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+                    const eurOption = waehrungColumn.querySelector("div[id*=option-0]");
+                    if (eurOption) {
+                        eurOption.click();
+                    } else {
+                        console.log("no option");
+                    }
                 }
-                next();
-            } else {
-                next();
             }
-        });
-
-        // TODO: Add your logic for each column here
-        // Process columns[2] for each row
-        processColumn(2, (einheitColumn, next) => {
-            // Add your logic for einheitColumn here
-            next();
-        });
-
-        // Process columns[1] for each row
-        processColumn(1, (leistungsartColumn, next) => {
-            // Add your logic for leistungsartColumn here
-            next();
-        });
+        }
 
         // focus first input field
         const firstInput = table.querySelector("input");
