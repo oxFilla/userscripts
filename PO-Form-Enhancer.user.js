@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            PO Form Enhancer
-// @description     Simplifies the completion of the Evolve PO form by setting default values (language, currency), formatting pasted numbers (commas), and calculating the sum of all costs
-// @version         20250701
+// @description     Simplifies filling out the Evolve PO form by setting default values (language, currency), saving project and approver from previous POs, formatting inserted numbers (commas) and calculating the sum of all costs
+// @version         20250704
 // @author          oxFilla
 // @namespace       https://github.com/oxFilla
 // @icon            https://evolve-partners.atlassian.net/s/g2slup/b/9/_/jira-favicon-scaled.png
@@ -9,10 +9,14 @@
 // @updateURL       https://raw.githubusercontent.com/oxFilla/userscripts/main/PO-Form-Enhancer.user.js
 // @downloadURL     https://raw.githubusercontent.com/oxFilla/userscripts/main/PO-Form-Enhancer.user.js
 // @supportURL      https://github.com/oxFilla/userscripts/issues
+// @grant           GM_getValue
+// @grant           GM_setValue
 // @run-at          document-start
 // @compatible      chrome
 // @license         GPL3
 // ==/UserScript==
+
+"use strict";
 
 // =======================================================================================
 // Config/Requirements
@@ -64,6 +68,11 @@ function waitForElement(selector, index = 0) {
 async function setDefaultValues() {
     // Set the language to German
     const languageIndicator = await waitForElement("#pf-undefined-cd-192 > div[class*=-control] div[class*=indicatorContainer]");
+    if (!languageIndicator) {
+        console.warn("Language indicator not found.");
+        return;
+    }
+
     languageIndicator.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
     const selectDeutsch = document.querySelector("div[id*=option-0]");
     if (selectDeutsch) {
@@ -80,30 +89,114 @@ async function setDefaultValues() {
             const columns = row.querySelectorAll("td");
             if (columns.length === 0) continue;
             const waehrungColumn = columns[columns.length - 1];
-            const waehrungSelectContainer = waehrungColumn.querySelector("div[class*=-control]");
-            if (waehrungSelectContainer) {
-                const indicator = waehrungSelectContainer.querySelector("div[class*=indicatorContainer]");
-                if (indicator) {
-                    // We have to set the currency via simulated click because the dropdown is managed by a React component.
-                    // Setting the value directly in the DOM or by attribute is ignored by React.
-                    // Only by opening the dropdown (mousedown) and clicking on the desired option
-                    // the value is accepted correctly and processed internally.
-                    indicator.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
-                    const eurOption = waehrungColumn.querySelector("div[id*=option-0]");
-                    if (eurOption) {
-                        eurOption.click();
-                    } else {
-                        console.log("no option");
-                    }
+            const waehrungDropdownElement = waehrungColumn.querySelector("div[class*=indicatorContainer]");
+            if (waehrungDropdownElement) {
+                // We have to set the currency via simulated click because the dropdown is managed by a React component.
+                // Setting the value directly in the DOM or by attribute is ignored by React.
+                // Only by opening the dropdown (mousedown) and clicking on the desired option
+                // the value is accepted correctly and processed internally.
+                waehrungDropdownElement.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+                const eurOption = waehrungColumn.querySelector("div[id*=option-0]");
+                if (eurOption) {
+                    eurOption.click();
+                } else {
+                    console.log("no option");
                 }
             }
         }
 
+        // select the project
+        (async () => {
+            const projectForm = document.querySelector('div[aria-labelledby="label-pf-undefined-cs-115"]');
+            if (!projectForm) {
+                console.warn("Project selection form not found.");
+                return;
+            }
+
+            const priorProjectChoice = await GM_getValue("priorProjectChoice", false);
+            if (priorProjectChoice) {
+                if (projectForm) {
+                    // Restore the selected project from GM storage
+                    const projectInput = projectForm.querySelector(`input[value="${priorProjectChoice}"]`);
+                    if (projectInput) {
+                        projectInput.click();
+                    } else {
+                        console.warn("No project input found to restore selection.");
+                    }
+                } else {
+                    console.warn("Project selection form not found.");
+                }
+            } else {
+                // If no project was selected before, select the last input as project (no project)
+                const projectInputs = projectForm.querySelectorAll("input[type='radio']");
+                const lastProjectInput = projectInputs[projectInputs.length - 1];
+                if (lastProjectInput) {
+                    lastProjectInput.click();
+                } else {
+                    console.warn("No project input found to select the first project.");
+                }
+            }
+
+            // add event listener to save the selected projet to GM storage
+            projectForm.addEventListener("change", async (event) => {
+                const target = event.target;
+                if (target && target.type === "radio" && target.value) {
+                    await GM_setValue("priorProjectChoice", target.value);
+                    console.log("Selected project saved:", target.value);
+                }
+            });
+        })();
+
+        // select the approver
+        (async () => {
+            const approverForm = document.querySelector("#pf-undefined-cd-88");
+            if (!approverForm) {
+                console.warn("Approver selection form not found.");
+                return;
+            }
+            const dropdownElement = approverForm.querySelector("div[class*=indicatorContainer]");
+
+            const priorApproverChoice = await GM_getValue("priorApproverChoice", false);
+            if (priorApproverChoice && dropdownElement) {
+                // Restore the selected approver from GM storage
+                // We have to set the currency via simulated click because the dropdown is managed by a React component.
+                // Setting the value directly in the DOM or by attribute is ignored by React.
+                // Only by opening the dropdown (mousedown) and clicking on the desired option
+                // the value is accepted correctly and processed internally.
+                dropdownElement.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+
+                // Find the option that matches the saved approver choice
+                const approverOptions = approverForm.querySelectorAll("div[id*=option]");
+                const approverOption = Array.from(approverOptions).find((option) => option.textContent.trim() === priorApproverChoice);
+
+                if (approverOption) {
+                    approverOption.click();
+                } else {
+                    console.warn("No approver found to restore selection.");
+                }
+            }
+
+            // add event listener to save the selected approver to GM storage
+            approverForm.addEventListener("click", async (event) => {
+                // Check whether an option has been clicked
+                const option = event.target.closest("div[id*=option]");
+                if (option) {
+                    const selectedApprover = option.innerText.trim();
+                    if (selectedApprover) {
+                        await GM_setValue("priorApproverChoice", selectedApprover);
+                        console.log("Selected Approver saved:", selectedApprover);
+                    }
+                }
+            });
+        })();
+
         // focus first input field
-        const firstInput = table.querySelector("input");
-        if (firstInput) {
-            firstInput.focus();
-        }
+        setTimeout(() => {
+            const firstInput = table.querySelector("input");
+            if (firstInput) {
+                firstInput.focus();
+            }
+        }, 10);
     }, 10);
 }
 
@@ -162,10 +255,11 @@ async function pasteFormatter() {
  */
 function calculateAndUpdateSum() {
     const table = document.querySelector(tableSelector);
-    if (!table) return;
-
     const sumElement = document.querySelector(sumSelector);
-    if (!sumElement) return;
+    if (!sumElement) {
+        console.warn("Sum element not found. Cannot update sum.");
+        return;
+    }
 
     const rows = table.querySelectorAll("tr");
     let sum = 0;
